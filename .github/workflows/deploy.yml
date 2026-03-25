@@ -1,0 +1,53 @@
+name: Deploy BubbleBlitzers
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set game server URL
+        run: echo '{"gameServerUrl":"${{ secrets.GAME_SERVER_URL }}"}' > public/game-config.json
+
+      - name: Build client
+        run: npm run build:client
+
+      - name: Copy project to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          source: "."
+          target: "~/bubble-blitzers"
+          rm: true
+          exclude: "node_modules,.git"
+
+      - name: Deploy server and client
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          script: |
+            echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" > ~/bubble-blitzers/.env
+            mkdir -p ${{ secrets.CLIENT_DEPLOY_PATH }}
+            rm -rf ${{ secrets.CLIENT_DEPLOY_PATH }}/*
+            cp -r ~/bubble-blitzers/dist/. ${{ secrets.CLIENT_DEPLOY_PATH }}/
+            cd ~/bubble-blitzers
+            docker compose up -d --build --force-recreate
