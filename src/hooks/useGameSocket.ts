@@ -2,27 +2,67 @@ import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { GameState } from '../types';
 
+type GameRuntimeConfig = {
+  gameServerUrl?: string;
+};
+
+/**
+ * Resolves Socket.IO origin:
+ * 1) public/game-config.json → gameServerUrl (non-empty), editable after build on the static host
+ * 2) import.meta.env.VITE_GAME_SERVER_URL at build time (optional)
+ * 3) window.location.origin
+ */
+async function resolveGameServerUrl(): Promise<string> {
+  const configPath = `${import.meta.env.BASE_URL}game-config.json`;
+  try {
+    const res = await fetch(configPath, { cache: 'no-store' });
+    if (res.ok) {
+      const json = (await res.json()) as GameRuntimeConfig;
+      if (typeof json.gameServerUrl === 'string' && json.gameServerUrl.trim() !== '') {
+        return json.gameServerUrl.trim().replace(/\/$/, '');
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
+  const envUrl = import.meta.env.VITE_GAME_SERVER_URL;
+  if (typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+
+  return window.location.origin;
+}
+
 export const useGameSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
 
   useEffect(() => {
-    const newSocket = io(window.location.origin);
-    setSocket(newSocket);
+    let cancelled = false;
+    let sock: Socket | null = null;
 
-    newSocket.on('connect', () => {
-      setMyId(newSocket.id || null);
-    });
+    (async () => {
+      const url = await resolveGameServerUrl();
+      if (cancelled) return;
+      sock = io(url, {
+        transports: ['websocket', 'polling'],
+      });
+      setSocket(sock);
 
-    newSocket.on('gameState', (state: GameState) => {
-      // Deep clone so each tick is a new object graph. Socket.io can reuse the same
-      // parsed reference across emits, which breaks prev-vs-next diffs for FX (flying text).
-      setGameState(structuredClone(state) as GameState);
-    });
+      sock.on('connect', () => {
+        setMyId(sock.id || null);
+      });
+
+      sock.on('gameState', (state: GameState) => {
+        setGameState(structuredClone(state) as GameState);
+      });
+    })();
 
     return () => {
-      newSocket.close();
+      cancelled = true;
+      sock?.close();
     };
   }, []);
 
