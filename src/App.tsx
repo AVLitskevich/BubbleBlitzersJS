@@ -3,6 +3,7 @@ import { Trophy, Users, Timer, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameSocket } from './hooks/useGameSocket';
 import GameField from './components/GameField';
+import MobileControls from './components/MobileControls';
 import { GameFieldsLayout } from './components/GameFieldsLayout';
 import { GAME_HEIGHT, GAME_WIDTH } from './types';
 import { PlayerState } from './types';
@@ -327,6 +328,7 @@ const App: React.FC = () => {
           <span className="text-[9px] font-bold uppercase tracking-widest sm:text-[10px]">Shoot</span>
         </div>
       </div>
+      <MobileControls onMove={setPaddleInput} onShoot={shootBall} />
     </div>
   );
 };
