@@ -142,7 +142,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#0a0a0a] px-2 py-2 font-sans text-white sm:px-4 sm:py-3">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#0a0a0a] px-2 py-2 pb-36 md:pb-2 font-sans text-white sm:px-4 sm:py-3">
       {/* Header */}
       <div className="mb-2 flex w-full max-w-5xl shrink-0 items-center justify-between gap-2 self-center overflow-visible rounded-xl border border-white/5 bg-[#1a1a1a] p-2 shadow-xl sm:mb-3 sm:rounded-2xl sm:p-3 md:p-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
@@ -231,7 +231,7 @@ const App: React.FC = () => {
           <GameField
             player={myPlayer}
             isMe={true}
-            title="Your Field"
+            title="👤 YOUR FIELD"
             borderColorClass="border-emerald-500/20"
             shadowColorClass="shadow-[0_0_30px_rgba(16,185,129,0.1)]"
           />
@@ -290,7 +290,8 @@ const App: React.FC = () => {
               <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-6" />
               <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">Game Over</h2>
               <p className="text-zinc-400 mb-8">
-                {gameState.winnerId === myId ? "You won the match!" : 
+                {gameState.technicalVictory && gameState.winnerId === myId ? "Opponent disconnected. Technical Victory!" :
+                 gameState.winnerId === myId ? "You won the match!" : 
                  gameState.winnerId === 'draw' ? "It's a draw!" : "Opponent won the match."}
               </p>
               <div className="grid grid-cols-2 gap-4 mb-8">
@@ -303,7 +304,11 @@ const App: React.FC = () => {
                   <p className="text-2xl font-mono">{opponentPlayer?.score || 0}</p>
                 </div>
               </div>
-              <p className="text-xs text-zinc-600">Waiting for server reset...</p>
+              <p className="text-xs text-zinc-600">
+                {gameState.restartTimer !== undefined
+                  ? `Restarting level in ${Math.ceil(gameState.restartTimer)} seconds...`
+                  : "Waiting for server reset..."}
+              </p>
             </div>
           </motion.div>
         )}
@@ -311,7 +316,7 @@ const App: React.FC = () => {
       </AnimatePresence>
 
       {/* Controls Help */}
-      <div className="pointer-events-none fixed bottom-2 left-2 z-30 flex flex-col gap-1 sm:bottom-6 sm:left-6 sm:gap-2 md:bottom-8 md:left-8">
+      <div className="pointer-events-none fixed bottom-2 left-2 z-30 hidden sm:flex flex-col gap-1 sm:bottom-6 sm:left-6 sm:gap-2 md:bottom-8 md:left-8">
         <div className="flex items-center gap-2 text-zinc-500 sm:gap-3">
           <kbd className="rounded border border-white/5 bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] sm:px-2 sm:py-1 sm:text-xs">
             ←

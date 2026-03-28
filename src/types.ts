@@ -50,6 +50,8 @@ export interface GameState {
   countdown: number;
   remainingTime: number;
   winnerId: string | null;
+  restartTimer?: number;
+  technicalVictory?: boolean;
 }
 
 export { 

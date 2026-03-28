@@ -102,9 +102,24 @@ export class GameManager {
     });
 
     socket.on("disconnect", () => {
+      if (this.gameState.status === 'playing') {
+        const remainingIds = Object.keys(this.gameState.players).filter(id => id !== socket.id);
+        if (remainingIds.length === 1) {
+          this.gameState.status = 'ended';
+          this.gameState.winnerId = remainingIds[0];
+          this.gameState.technicalVictory = true;
+          this.gameState.restartTimer = 5;
+        } else {
+          this.gameState.status = 'waiting';
+          this.gameState.remainingTime = GAME_DURATION;
+          this.gameState.restartTimer = undefined;
+        }
+      } else {
+        this.gameState.status = 'waiting';
+        this.gameState.remainingTime = GAME_DURATION;
+        this.gameState.restartTimer = undefined;
+      }
       delete this.gameState.players[socket.id];
-      this.gameState.status = 'waiting';
-      this.gameState.remainingTime = GAME_DURATION;
       this.io.emit("gameState", this.gameState);
     });
   }
@@ -140,6 +155,7 @@ export class GameManager {
       this.gameState.remainingTime -= 1/60;
       if (this.gameState.remainingTime <= 0) {
         this.gameState.status = 'ended';
+        this.gameState.restartTimer = 5;
         const pIds = Object.keys(this.gameState.players);
         if (pIds.length === 2) {
           const p1 = this.gameState.players[pIds[0]];
@@ -178,10 +194,23 @@ export class GameManager {
         if (allCleared) {
           this.gameState.status = 'ended';
           this.gameState.winnerId = player.id;
+          this.gameState.restartTimer = 5;
         }
       }
     } else if (this.gameState.status === 'ended') {
       this.zeroPaddleInputs();
+      if (this.gameState.restartTimer !== undefined) {
+        this.gameState.restartTimer -= 1/60;
+        if (this.gameState.restartTimer <= 0) {
+          this.gameState.restartTimer = undefined;
+          this.gameState.technicalVictory = false;
+          for (const id in this.gameState.players) {
+            this.gameState.players[id] = this.resetPlayer(id);
+          }
+          this.gameState.status = 'countdown';
+          this.gameState.countdown = 3;
+        }
+      }
     }
   }
 }

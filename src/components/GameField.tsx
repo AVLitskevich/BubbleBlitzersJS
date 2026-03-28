@@ -124,7 +124,7 @@ const GameField: React.FC<GameFieldProps> = ({
           </span>
         )}
         {isMe && !player.ballActive && player.canShoot && (
-          <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+          <span className="hidden sm:inline-block text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
             Press SPACE to Shoot
           </span>
         )}
