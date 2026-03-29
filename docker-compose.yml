@@ -8,3 +8,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=${SERVER_PORT}
+      - REPLAYS_DIR=/app/public/replays
+    volumes:
+      - ${REPLAYS_HOST_PATH}:/app/public/replays

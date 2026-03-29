@@ -54,6 +54,34 @@ export interface GameState {
   technicalVictory?: boolean;
 }
 
+export interface ReplayFramePlayer {
+  paddleX: number;
+  ballPos: Vector2;
+  score: number;
+  ballActive: boolean;
+  canShoot: boolean;
+}
+
+export interface ReplayFrame {
+  tick: number;
+  players: Record<string, ReplayFramePlayer>;
+}
+
+export interface ReplayEvent {
+  tick: number;
+  type: 'bubbleDestroyed';
+  playerId: string;
+  bubbleId: string;
+}
+
+export interface ReplayData {
+  version: number;
+  date: string;
+  initialState: GameState;
+  frames: ReplayFrame[];
+  events: ReplayEvent[];
+}
+
 export { 
   GAME_WIDTH, 
   GAME_HEIGHT, 

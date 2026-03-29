@@ -12,13 +12,21 @@ import {
   BUBBLE_COLS, 
   GAME_DURATION,
   PADDLE_SPEED,
-  Bubble
+  Bubble,
+  ReplayData,
+  ReplayFrame,
+  ReplayFramePlayer,
+  ReplayEvent
 } from "../src/types.js";
 import { Physics } from "./Physics.js";
+import fs from "fs";
+import path from "path";
 
 export class GameManager {
   private io: Server;
   private gameState: GameState;
+  private activeReplay: ReplayData | null = null;
+  private currentTick: number = 0;
 
   constructor(io: Server) {
     this.io = io;
@@ -150,6 +158,21 @@ export class GameManager {
       if (this.gameState.countdown <= 0) {
         this.gameState.status = 'playing';
         this.gameState.remainingTime = GAME_DURATION;
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hr = String(now.getHours()).padStart(2, '0');
+        const mn = String(now.getMinutes()).padStart(2, '0');
+        const sc = String(now.getSeconds()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}_${hr}-${mn}-${sc}`;
+        this.activeReplay = {
+          version: 1,
+          date: dateStr,
+          initialState: JSON.parse(JSON.stringify(this.gameState)),
+          frames: [],
+          events: []
+        };
       }
     } else if (this.gameState.status === 'playing') {
       this.gameState.remainingTime -= 1/60;
@@ -162,9 +185,11 @@ export class GameManager {
           const p2 = this.gameState.players[pIds[1]];
           this.gameState.winnerId = p1.score > p2.score ? p1.id : (p2.score > p1.score ? p2.id : 'draw');
         }
+        this.saveReplay();
       }
 
       const dt = 1 / 60;
+      this.currentTick++;
       for (const id in this.gameState.players) {
         const player = this.gameState.players[id];
 
@@ -190,12 +215,40 @@ export class GameManager {
           continue;
         }
 
-        const { allCleared } = Physics.updateBall(player);
+        const { allCleared, destroyedBubbles } = Physics.updateBall(player);
+        if (destroyedBubbles.length > 0 && this.activeReplay) {
+          for (const bid of destroyedBubbles) {
+            this.activeReplay.events.push({
+              tick: this.currentTick,
+              type: 'bubbleDestroyed',
+              playerId: player.id,
+              bubbleId: bid
+            });
+          }
+        }
         if (allCleared) {
           this.gameState.status = 'ended';
           this.gameState.winnerId = player.id;
           this.gameState.restartTimer = 5;
+          this.saveReplay();
         }
+      }
+      if (this.activeReplay && this.currentTick % 3 === 0) {
+        const payload: Record<string, ReplayFramePlayer> = {};
+        for (const pid in this.gameState.players) {
+          const p = this.gameState.players[pid];
+          payload[pid] = {
+            paddleX: p.paddleX,
+            ballPos: { x: p.ballPos.x, y: p.ballPos.y },
+            score: p.score,
+            ballActive: p.ballActive,
+            canShoot: p.canShoot
+          };
+        }
+        this.activeReplay.frames.push({
+          tick: this.currentTick,
+          players: payload
+        });
       }
     } else if (this.gameState.status === 'ended') {
       this.zeroPaddleInputs();
@@ -213,4 +266,23 @@ export class GameManager {
       }
     }
   }
+
+  private saveReplay() {
+    if (!this.activeReplay) return;
+    try {
+      const replaysDir = process.env.REPLAYS_DIR 
+        ? path.resolve(process.env.REPLAYS_DIR)
+        : path.join(process.cwd(), 'public', 'replays');
+
+      if (!fs.existsSync(replaysDir)) {
+        fs.mkdirSync(replaysDir, { recursive: true });
+      }
+      const filename = `replay_${this.activeReplay.date}.replay`;
+      fs.writeFileSync(path.join(replaysDir, filename), JSON.stringify(this.activeReplay));
+    } catch (e) {
+      console.error("Failed to save replay:", e);
+    }
+    this.activeReplay = null;
+  }
 }
+
