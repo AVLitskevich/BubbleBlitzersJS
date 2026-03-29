@@ -96,3 +96,7 @@ vite.config.mjs
 - No user authentication; no rooms beyond single 2-player lobby.
 - `ended` state does not automatically return to `playing` (UI may say “waiting for server reset”).
 - `PlayerState.isReady` exists in types but is unused.
+
+## Explicit AI Instructions / Rules
+
+- **Strict Planning Rule:** Do not start writing code until the user explicitly says that planning is finished and you can write code. If the user announces a switch from code editing mode back to planning, you must strictly stay in planning mode and refrain from writing code.

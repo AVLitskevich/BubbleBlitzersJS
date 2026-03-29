@@ -7,10 +7,6 @@ import { defineConfig, loadEnv } from 'vite';
 
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 
-/**
- * Vite `base`: use `"./"` for builds that must load from any URL path (assets relative to index.html).
- * Use absolute paths like `/webgl/bubble-blitzers/` only when you want fixed hosting on that prefix.
- */
 function readClientBaseUrl() {
   const file = path.join(projectRoot, 'config', 'client.json');
   try {
@@ -35,12 +31,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, '');
   const fromFile = readClientBaseUrl();
   const fromEnv = env.VITE_BASE_URL?.trim();
-  // Config file first; VITE_BASE_URL overrides when set (e.g. CI).
-  const rawBase =
-    fromEnv && fromEnv.length > 0 ? fromEnv : fromFile;
+  const rawBase = fromEnv && fromEnv.length > 0 ? fromEnv : fromFile;
   const normalizedBase = normalizeViteBase(rawBase);
 
   return {
+    root: path.resolve(projectRoot, 'replay-viewer'),
     base: normalizedBase,
     plugins: [react(), tailwindcss()],
     define: {
@@ -51,15 +46,12 @@ export default defineConfig(({ mode }) => {
         '@': projectRoot,
       },
     },
-    server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-    },
     build: {
-      outDir: path.resolve(projectRoot, 'dist/client'),
+      outDir: path.resolve(projectRoot, 'dist/replay-viewer'),
       emptyOutDir: true,
       rollupOptions: {
         input: {
-          main: path.resolve(projectRoot, 'index.html'),
+          main: path.resolve(projectRoot, 'replay-viewer/index.html'),
         },
       },
     },

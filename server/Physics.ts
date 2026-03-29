@@ -11,8 +11,8 @@ import {
 } from '../src/types.js';
 
 export class Physics {
-  static updateBall(player: PlayerState): { allCleared: boolean } {
-    if (!player.ballActive) return { allCleared: false };
+  static updateBall(player: PlayerState): { allCleared: boolean, destroyedBubbles: string[] } {
+    if (!player.ballActive) return { allCleared: false, destroyedBubbles: [] };
 
     // Move ball
     player.ballPos.x += player.ballVel.x;
@@ -42,6 +42,7 @@ export class Physics {
 
     // Bubble collisions
     let allCleared = true;
+    const destroyedBubbles: string[] = [];
     for (const bubble of player.bubbles) {
       if (!bubble.active) continue;
       allCleared = false;
@@ -50,6 +51,7 @@ export class Physics {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < BALL_RADIUS + BUBBLE_RADIUS) {
         bubble.active = false;
+        destroyedBubbles.push(bubble.id);
         player.score += 10;
         // Simple bounce logic
         if (Math.abs(dx) > Math.abs(dy)) player.ballVel.x *= -1;
@@ -65,6 +67,6 @@ export class Physics {
       player.score = Math.max(0, player.score - BALL_LOSS_SCORE_PENALTY);
     }
 
-    return { allCleared };
+    return { allCleared, destroyedBubbles };
   }
 }

@@ -21,5 +21,6 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist-server ./dist-server
 COPY config/server.json ./config/server.json
+RUN mkdir -p public/replays
 EXPOSE 3000
 CMD ["node", "dist-server/server.mjs"]

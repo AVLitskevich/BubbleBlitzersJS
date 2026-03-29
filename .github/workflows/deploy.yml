@@ -27,6 +27,9 @@ jobs:
       - name: Build client
         run: npm run build:client
 
+      - name: Build replay viewer
+        run: npm run build:replay
+
       - name: Copy project to server
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -46,8 +49,17 @@ jobs:
           password: ${{ secrets.REMOTE_PASSWORD }}
           script: |
             echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" > ~/bubble-blitzers/.env
+            echo "REPLAYS_HOST_PATH=${{ secrets.REPLAYS_HOST_PATH }}" >> ~/bubble-blitzers/.env
+            
+            # Deploy Main Client
             mkdir -p ${{ secrets.CLIENT_DEPLOY_PATH }}
             rm -rf ${{ secrets.CLIENT_DEPLOY_PATH }}/*
-            cp -r ~/bubble-blitzers/dist/. ${{ secrets.CLIENT_DEPLOY_PATH }}/
+            cp -r ~/bubble-blitzers/dist/client/. ${{ secrets.CLIENT_DEPLOY_PATH }}/
+            
+            # Deploy Replay Viewer
+            mkdir -p ${{ secrets.REPLAY_DEPLOY_PATH }}
+            rm -rf ${{ secrets.REPLAY_DEPLOY_PATH }}/*
+            cp -r ~/bubble-blitzers/dist/replay-viewer/. ${{ secrets.REPLAY_DEPLOY_PATH }}/
+            
             cd ~/bubble-blitzers
             docker compose up -d --build --force-recreate
