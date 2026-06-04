@@ -39,6 +39,23 @@ jobs:
       - name: Build replay viewer
         run: npm run build:replay
 
+      - name: Prepare server deploy directory
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          script: |
+            set -e
+            DEPLOY_PATH="${{ vars.SERVER_DEPLOY_PATH }}"
+            if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
+              cd "$DEPLOY_PATH"
+              docker compose down --remove-orphans || true
+            fi
+            sudo rm -rf "$DEPLOY_PATH"
+            sudo mkdir -p "$DEPLOY_PATH"
+            sudo chown "$(whoami):$(whoami)" "$DEPLOY_PATH"
+
       - name: Copy project to server
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -47,7 +64,7 @@ jobs:
           password: ${{ secrets.REMOTE_PASSWORD }}
           source: "."
           target: "${{ vars.SERVER_DEPLOY_PATH }}"
-          rm: true
+          rm: false
           exclude: "node_modules,.git"
 
       - name: Deploy server and client
@@ -57,18 +74,18 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           password: ${{ secrets.REMOTE_PASSWORD }}
           script: |
-            echo "SERVER_PORT=${{ vars.SERVER_PORT }}" > ${{ vars.SERVER_DEPLOY_PATH }}/.env
-            echo "REPLAYS_HOST_PATH=${{ vars.REPLAYS_HOST_PATH }}" >> ${{ vars.SERVER_DEPLOY_PATH }}/.env
-            
-            # Deploy Main Client
-            mkdir -p ${{ vars.CLIENT_DEPLOY_PATH }}
-            rm -rf ${{ vars.CLIENT_DEPLOY_PATH }}/*
-            cp -r ${{ vars.SERVER_DEPLOY_PATH }}/dist/client/. ${{ vars.CLIENT_DEPLOY_PATH }}/
-            
-            # Deploy Replay Viewer
-            mkdir -p ${{ vars.REPLAY_DEPLOY_PATH }}
-            rm -rf ${{ vars.REPLAY_DEPLOY_PATH }}/*
-            cp -r ${{ vars.SERVER_DEPLOY_PATH }}/dist/replay-viewer/. ${{ vars.REPLAY_DEPLOY_PATH }}/
-            
-            cd ${{ vars.SERVER_DEPLOY_PATH }}
+            set -e
+            DEPLOY_PATH="${{ vars.SERVER_DEPLOY_PATH }}"
+            CLIENT_PATH="${{ vars.CLIENT_DEPLOY_PATH }}"
+            REPLAY_PATH="${{ vars.REPLAY_DEPLOY_PATH }}"
+
+            echo "SERVER_PORT=${{ vars.SERVER_PORT }}" > "$DEPLOY_PATH/.env"
+            echo "REPLAYS_HOST_PATH=${{ vars.REPLAYS_HOST_PATH }}" >> "$DEPLOY_PATH/.env"
+
+            sudo mkdir -p "$CLIENT_PATH" "$REPLAY_PATH" "${{ vars.REPLAYS_HOST_PATH }}"
+            sudo rm -rf "$CLIENT_PATH"/* "$REPLAY_PATH"/*
+            sudo cp -r "$DEPLOY_PATH/dist/client/." "$CLIENT_PATH/"
+            sudo cp -r "$DEPLOY_PATH/dist/replay-viewer/." "$REPLAY_PATH/"
+
+            cd "$DEPLOY_PATH"
             docker compose up -d --build --force-recreate
