@@ -50,7 +50,7 @@ jobs:
             DEPLOY_PATH="${{ vars.SERVER_DEPLOY_PATH }}"
             if [ -f "$DEPLOY_PATH/docker-compose.yml" ]; then
               cd "$DEPLOY_PATH"
-              docker compose down --remove-orphans || true
+              sudo docker compose down --remove-orphans || true
             fi
             sudo rm -rf "$DEPLOY_PATH"
             sudo mkdir -p "$DEPLOY_PATH"
@@ -88,4 +88,4 @@ jobs:
             sudo cp -r "$DEPLOY_PATH/dist/replay-viewer/." "$REPLAY_PATH/"
 
             cd "$DEPLOY_PATH"
-            docker compose up -d --build --force-recreate
+            sudo docker compose up -d --build --force-recreate
